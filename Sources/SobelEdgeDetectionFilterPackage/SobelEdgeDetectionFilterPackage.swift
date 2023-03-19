@@ -119,10 +119,10 @@ extension UIImage {
         let rect = CGRect(x: x, y: height - y - 1, width: 1, height: 1)
         context.draw(cgImage, in: rect)
         
-        let red = CGFloat(pixelData[0])
-        let green = CGFloat(pixelData[1])
-        let blue = CGFloat(pixelData[2])
-        let alpha = CGFloat(pixelData[3])
+        let red = Int(pixelData[0])
+        let green = Int(pixelData[1])
+        let blue = Int(pixelData[2])
+        let alpha = Int(pixelData[3])
         let intensity = (red + green + blue) / (3 * alpha)
         
         return Int(intensity)
