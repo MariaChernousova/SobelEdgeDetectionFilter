@@ -2,18 +2,20 @@ import UIKit
 
 public struct SobelEdgeDetectionFilterPackage {
     // Load the input image
-    public var inputImage: UIImage
+//    public var inputImage: UIImage
     
-    private var width = 0
-    private var height = 0
+//    private var width = 0
+//    private var height = 0
+//
+//    // Get the width and height of the input image
+//    private mutating func getSizeOfElement(inputImage: UIImage) {
+//        width = Int(inputImage.size.width)
+//        height = Int(inputImage.size.height)
+//    }
     
-    // Get the width and height of the input image
-    private mutating func getSizeOfElement(inputImage: UIImage) {
-        width = Int(inputImage.size.width)
-        height = Int(inputImage.size.height)
-    }
-    
-    public mutating func implementSobelFilter(inputImage: UIImage) -> UIImageView {
+    public func implementSobelFilter(inputImage: UIImage) -> UIImageView {
+        let width = Int(inputImage.size.width)
+        let height = Int(inputImage.size.height)
         // Create a new output image context
         UIGraphicsBeginImageContextWithOptions(inputImage.size, false, inputImage.scale)
         
