@@ -30,38 +30,38 @@ public struct SobelEdgeDetectionFilterPackage {
     public init() { }
     
     public func applySobelFilter(image: UIImage) -> UIImage? {
-        guard let inputImage = CIImage(image: image) else {
-            // Failed to create CIImage from UIImage
-            return nil
-        }
-        
-        if let edgeDetector = CIFilter(name: "CISobelEdgeDetection") {
-            edgeDetector.setValue(inputImage, forKey: kCIInputImageKey)
-            guard let outputImage = edgeDetector.outputImage else { return nil }
-            
-            let ciContext = CIContext(options: nil)
-            if let cgImage = ciContext.createCGImage(outputImage, from: outputImage.extent) {
-                let processedImage = UIImage(cgImage: cgImage)
-                return processedImage
-            }
-        }
-        
-        // Failed to apply edge detection filter
-        return nil
-
-//        guard let inputCGImage = image.cgImage else {
+//        guard let inputImage = CIImage(image: image) else {
+//            // Failed to create CIImage from UIImage
 //            return nil
 //        }
-//
-//        let inputCIImage = CIImage(cgImage: inputCGImage)
-//        let context = CIContext()
-//        let sobelFilter = CIFilter(name: "CISobelEdgeDetection")!
-//        sobelFilter.setValue(inputCIImage, forKey: kCIInputImageKey)
-//        let outputCIImage = sobelFilter.outputImage!
-//        let outputCGImage = context.createCGImage(outputCIImage, from: outputCIImage.extent)!
-//        let outputImage = UIImage(cgImage: outputCGImage, scale: image.scale, orientation: image.imageOrientation)
-//
-//        return outputImage
+//        
+//        if let edgeDetector = CIFilter(name: "CISobelEdgeDetection") {
+//            edgeDetector.setValue(inputImage, forKey: kCIInputImageKey)
+//            guard let outputImage = edgeDetector.outputImage else { return nil }
+//            
+//            let ciContext = CIContext(options: nil)
+//            if let cgImage = ciContext.createCGImage(outputImage, from: outputImage.extent) {
+//                let processedImage = UIImage(cgImage: cgImage)
+//                return processedImage
+//            }
+//        }
+//        
+//        // Failed to apply edge detection filter
+//        return nil
+
+        guard let inputCGImage = image.cgImage else {
+            return nil
+        }
+
+        let inputCIImage = CIImage(cgImage: inputCGImage)
+        let context = CIContext()
+        let sobelFilter = CIFilter(name: "CISobelEdgeDetection")!
+        sobelFilter.setValue(inputCIImage, forKey: kCIInputImageKey)
+        let outputCIImage = sobelFilter.outputImage!
+        let outputCGImage = context.createCGImage(outputCIImage, from: outputCIImage.extent)!
+        let outputImage = UIImage(cgImage: outputCGImage, scale: image.scale, orientation: image.imageOrientation)
+
+        return outputImage
 
 //        let inputImage = image.convertToGrayScale()
 //        let inputPixels = inputImage.getPixels()
