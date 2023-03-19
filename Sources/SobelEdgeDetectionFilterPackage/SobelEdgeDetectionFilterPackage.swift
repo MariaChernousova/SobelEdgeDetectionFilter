@@ -52,10 +52,12 @@ public struct SobelEdgeDetectionFilterPackage {
                         pixelY += sobelY[sobelIndex] * Int16(intensity)
                     }
                 }
-                let p1 = pixelX * pixelX
-                let p2 = pixelY * pixelY
-                let p3 = Double(p1 + p2)
-                pixel = Int16(sqrt(p3))
+                DispatchQueue.main.async {
+                    let p1 = pixelX * pixelX
+                    let p2 = pixelY * pixelY
+                    let p3 = Double(p1 + p2)
+                    pixel = Int16(sqrt(p3))
+                }
                 pixel = pixel < 0 ? 0 : pixel > 255 ? 255 : pixel
                 pixel /= divisor
                 outputPixels[(y * Int(inputImage.size.width)) + x] = PixelData(red: UInt8(pixel), green: UInt8(pixel), blue: UInt8(pixel), alpha: 255)
