@@ -28,44 +28,58 @@ public struct SobelEdgeDetectionFilterPackage {
 //    }
     public init() { }
     
-    public func applySobelFilter(image: UIImage) -> UIImage {
-        let inputImage = image.convertToGrayScale()
-        let inputPixels = inputImage.getPixels()
-        let outputPixels = UnsafeMutablePointer<PixelData>.allocate(capacity: Int(inputImage.size.width * inputImage.size.height))
-        defer {
-            outputPixels.deallocate()
+    public func applySobelFilter(image: UIImage) -> UIImage? {
+        guard let inputCGImage = image.cgImage else {
+            return nil
         }
-        let sobelX: [Int16] = [-1, 0, 1, -2, 0, 2, -1, 0, 1]
-        let sobelY: [Int16] = [-1, -2, -1, 0, 0, 0, 1, 2, 1]
-        let divisor: Int16 = 8
-        for y in 1..<Int(inputImage.size.height) - 1 {
-            for x in 1..<Int(inputImage.size.width) - 1 {
-                var pixelX: Int16 = 0
-                var pixelY: Int16 = 0
-                var pixel: Int16 = 0
-                for dy in -1...1 {
-                    for dx in -1...1 {
-                        let index = ((y + dy) * Int(inputImage.size.width)) + (x + dx)
-                        let intensity = inputImage.getPixelIntensity(x: x + dx, y: y + dy)
-                        let sobelIndex = ((dy + 1) * 3) + (dx + 1)
-                        pixelX += sobelX[sobelIndex] * Int16(intensity)
-                        pixelY += sobelY[sobelIndex] * Int16(intensity)
-                    }
-                }
-                DispatchQueue.main.async {
-                    let p1 = pixelX * pixelX
-                    let p2 = pixelY * pixelY
-                    let p3 = Double(p1 + p2)
-                    pixel = Int16(sqrt(p3))
-                }
-                pixel = pixel < 0 ? 0 : pixel > 255 ? 255 : pixel
-                pixel /= divisor
-                outputPixels[(y * Int(inputImage.size.width)) + x] = PixelData(red: UInt8(pixel), green: UInt8(pixel), blue: UInt8(pixel), alpha: 255)
-                //                PixelData(a: 255, r: UInt8(pixel), g: UInt8(pixel), b: UInt8(pixel))
-            }
-        }
-        let outputCGImage = inputImage.createCGImage(pixels: outputPixels, width: Int(inputImage.size.width), height: Int(inputImage.size.height))
-        return UIImage(cgImage: outputCGImage!)
+        
+        let inputCIImage = CIImage(cgImage: inputCGImage)
+        let context = CIContext()
+        let sobelFilter = CIFilter(name: "CISobelEdgeDetection")!
+        sobelFilter.setValue(inputCIImage, forKey: kCIInputImageKey)
+        let outputCIImage = sobelFilter.outputImage!
+        let outputCGImage = context.createCGImage(outputCIImage, from: outputCIImage.extent)!
+        let outputImage = UIImage(cgImage: outputCGImage, scale: image.scale, orientation: image.imageOrientation)
+        
+        return outputImage
+
+//        let inputImage = image.convertToGrayScale()
+//        let inputPixels = inputImage.getPixels()
+//        let outputPixels = UnsafeMutablePointer<PixelData>.allocate(capacity: Int(inputImage.size.width * inputImage.size.height))
+//        defer {
+//            outputPixels.deallocate()
+//        }
+//        let sobelX: [Int16] = [-1, 0, 1, -2, 0, 2, -1, 0, 1]
+//        let sobelY: [Int16] = [-1, -2, -1, 0, 0, 0, 1, 2, 1]
+//        let divisor: Int16 = 8
+//        for y in 1..<Int(inputImage.size.height) - 1 {
+//            for x in 1..<Int(inputImage.size.width) - 1 {
+//                var pixelX: Int16 = 0
+//                var pixelY: Int16 = 0
+//                var pixel: Int16 = 0
+//                for dy in -1...1 {
+//                    for dx in -1...1 {
+//                        let index = ((y + dy) * Int(inputImage.size.width)) + (x + dx)
+//                        let intensity = inputImage.getPixelIntensity(x: x + dx, y: y + dy)
+//                        let sobelIndex = ((dy + 1) * 3) + (dx + 1)
+//                        pixelX += sobelX[sobelIndex] * Int16(intensity)
+//                        pixelY += sobelY[sobelIndex] * Int16(intensity)
+//                    }
+//                }
+//                DispatchQueue.main.async {
+//                    let p1 = pixelX * pixelX
+//                    let p2 = pixelY * pixelY
+//                    let p3 = Double(p1 + p2)
+//                    pixel = Int16(sqrt(p3))
+//                }
+//                pixel = pixel < 0 ? 0 : pixel > 255 ? 255 : pixel
+//                pixel /= divisor
+//                outputPixels[(y * Int(inputImage.size.width)) + x] = PixelData(red: UInt8(pixel), green: UInt8(pixel), blue: UInt8(pixel), alpha: 255)
+//                //                PixelData(a: 255, r: UInt8(pixel), g: UInt8(pixel), b: UInt8(pixel))
+//            }
+//        }
+//        let outputCGImage = inputImage.createCGImage(pixels: outputPixels, width: Int(inputImage.size.width), height: Int(inputImage.size.height))
+//        return UIImage(cgImage: outputCGImage!)
     }
     
 //    public func implementSobelFilter(inputImage: UIImage) -> UIImageView {
