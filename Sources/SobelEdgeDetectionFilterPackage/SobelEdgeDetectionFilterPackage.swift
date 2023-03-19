@@ -28,7 +28,7 @@ public struct SobelEdgeDetectionFilterPackage {
 //    }
     public init() { }
     
-    func applySobelFilter(image: UIImage) -> UIImage {
+    public func applySobelFilter(image: UIImage) -> UIImage {
         let inputImage = image.convertToGrayScale()
         let inputPixels = inputImage.getPixels()
         let outputPixels = UnsafeMutablePointer<PixelData>.allocate(capacity: Int(inputImage.size.width * inputImage.size.height))
