@@ -12,6 +12,7 @@ public struct SobelEdgeDetectionFilterPackage {
 //        width = Int(inputImage.size.width)
 //        height = Int(inputImage.size.height)
 //    }
+    public init() { }
     
     public func implementSobelFilter(inputImage: UIImage) -> UIImageView {
         let width = Int(inputImage.size.width)
