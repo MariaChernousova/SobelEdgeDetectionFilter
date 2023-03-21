@@ -1,307 +1,138 @@
 import UIKit
-import Metal
-
-struct PixelData {
-    var red: UInt8
-    var green: UInt8
-    var blue: UInt8
-    var alpha: UInt8
-    
-    init(red: UInt8, green: UInt8, blue: UInt8, alpha: UInt8) {
-        self.red = red
-        self.green = green
-        self.blue = blue
-        self.alpha = alpha
-    }
-}
 
 public struct SobelEdgeDetectionFilterPackage {
-    // Load the input image
-//    public var inputImage: UIImage
     
-//    private var width = 0
-//    private var height = 0
-//
-//    // Get the width and height of the input image
-//    private mutating func getSizeOfElement(inputImage: UIImage) {
-//        width = Int(inputImage.size.width)
-//        height = Int(inputImage.size.height)
-//    }
     public init() { }
     
-    public func applySobelFilter(image: UIImage) -> UIImage? {
-//        guard let inputImage = CIImage(image: image) else {
-//            // Failed to create CIImage from UIImage
-//            return nil
-//        }
-//        
-//        if let edgeDetector = CIFilter(name: "CISobelEdgeDetection") {
-//            edgeDetector.setValue(inputImage, forKey: kCIInputImageKey)
-//            guard let outputImage = edgeDetector.outputImage else { return nil }
-//            
-//            let ciContext = CIContext(options: nil)
-//            if let cgImage = ciContext.createCGImage(outputImage, from: outputImage.extent) {
-//                let processedImage = UIImage(cgImage: cgImage)
-//                return processedImage
-//            }
-//        }
-//        
-//        // Failed to apply edge detection filter
-//        return nil
+    public func applySobelFilter(image: UIImage, completion: @escaping (UIImage) -> Void) {
 
-        guard let inputCGImage = image.cgImage else {
-            return nil
-        }
+        guard let inputPixels = image.convertToGrayscale()?.pixelData() else {
+                    fatalError()
+                }
+        let outputPixels = UnsafeMutablePointer<UInt>.allocate(capacity: inputPixels.count)
 
-        let inputCIImage = CIImage(cgImage: inputCGImage)
-        let context = CIContext()
-        let sobelFilter = CIFilter(name: "CISobelEdgeDetection")!
-        sobelFilter.setValue(inputCIImage, forKey: kCIInputImageKey)
-        let outputCIImage = sobelFilter.outputImage!
-        let outputCGImage = context.createCGImage(outputCIImage, from: outputCIImage.extent)!
-        let outputImage = UIImage(cgImage: outputCGImage, scale: image.scale, orientation: image.imageOrientation)
 
-        return outputImage
+        let width = Int(image.size.width)
+        let height = Int(image.size.height)
 
-//        let inputImage = image.convertToGrayScale()
-//        let inputPixels = inputImage.getPixels()
-//        let outputPixels = UnsafeMutablePointer<PixelData>.allocate(capacity: Int(inputImage.size.width * inputImage.size.height))
-//        defer {
-//            outputPixels.deallocate()
-//        }
-//        let sobelX: [Int16] = [-1, 0, 1, -2, 0, 2, -1, 0, 1]
-//        let sobelY: [Int16] = [-1, -2, -1, 0, 0, 0, 1, 2, 1]
-//        let divisor: Int16 = 8
-//        for y in 1..<Int(inputImage.size.height) - 1 {
-//            for x in 1..<Int(inputImage.size.width) - 1 {
-//                var pixelX: Int16 = 0
-//                var pixelY: Int16 = 0
-//                var pixel: Int16 = 0
-//                for dy in -1...1 {
-//                    for dx in -1...1 {
-//                        let index = ((y + dy) * Int(inputImage.size.width)) + (x + dx)
-//                        let intensity = inputImage.getPixelIntensity(x: x + dx, y: y + dy)
-//                        let sobelIndex = ((dy + 1) * 3) + (dx + 1)
-//                        pixelX += sobelX[sobelIndex] * Int16(intensity)
-//                        pixelY += sobelY[sobelIndex] * Int16(intensity)
-//                    }
-//                }
-//                DispatchQueue.main.async {
-//                    let p1 = pixelX * pixelX
-//                    let p2 = pixelY * pixelY
-//                    let p3 = Double(p1 + p2)
-//                    pixel = Int16(sqrt(p3))
-//                }
-//                pixel = pixel < 0 ? 0 : pixel > 255 ? 255 : pixel
-//                pixel /= divisor
-//                outputPixels[(y * Int(inputImage.size.width)) + x] = PixelData(red: UInt8(pixel), green: UInt8(pixel), blue: UInt8(pixel), alpha: 255)
-//                //                PixelData(a: 255, r: UInt8(pixel), g: UInt8(pixel), b: UInt8(pixel))
-//            }
-//        }
-//        let outputCGImage = inputImage.createCGImage(pixels: outputPixels, width: Int(inputImage.size.width), height: Int(inputImage.size.height))
-//        return UIImage(cgImage: outputCGImage!)
+                // Sobel kernel matrices
+                let sobelX: [Int] = [-1, 0, 1,
+                                        -2, 0, 2,
+                                        -1, 0, 1]
+                let sobelY: [Int] = [-1, -2, -1,
+                                        0, 0, 0,
+                                        1, 2, 1]
+
+                // Convolve image with Sobel kernels
+                for y in 1..<height-1 {
+                    for x in 1..<width-1 {
+                        var pixelX: Int = 0
+                        var pixelY: Int = 0
+
+                        for j in 0..<3 {
+                            for i in 0..<3 {
+                                let pixelIndex = (y + j - 1) * width + (x + i - 1)
+                                let inputPixelsIndex = Int(inputPixels[pixelIndex]) / 10000
+                                let sobelXIndex = Int(sobelX[j*3+i])
+                                let sobelYIndex = Int(sobelY[j*3+i])
+                                pixelX += inputPixelsIndex * sobelXIndex
+                                pixelY += inputPixelsIndex * sobelYIndex
+                            }
+                        }
+
+                        let pixelIndex = y * width + x
+                        let pixelValue = sqrt(Double(pixelX * pixelX + pixelY * pixelY))
+                        outputPixels[pixelIndex] = UInt(max(0, min(255, pixelValue)))
+                    }
+                }
+
+                // Create new image from filtered pixel data
+                let colorSpace = CGColorSpaceCreateDeviceGray()
+                guard let context = CGContext(data: outputPixels,
+                                              width: width,
+                                              height: height,
+                                              bitsPerComponent: 8,
+                                              bytesPerRow: width,
+                                              space: colorSpace,
+                                              bitmapInfo: CGImageAlphaInfo.none.rawValue),
+                      let cgImage = context.makeImage()
+                else {
+                    fatalError()
+                }
+                completion(UIImage(cgImage: cgImage))
     }
-    
-//    public func implementSobelFilter(inputImage: UIImage) -> UIImageView {
-//        let width = Int(inputImage.size.width)
-//        let height = Int(inputImage.size.height)
-//        // Create a new output image context
-//        UIGraphicsBeginImageContextWithOptions(inputImage.size, false, inputImage.scale)
-//
-//        // Convert the input image to grayscale
-//        let grayScaleImage = inputImage.convertToGrayScale()
-//
-//        // Define the horizontal and vertical Sobel operator kernels
-//        let sobelKernelX = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]
-//        let sobelKernelY = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]]
-//
-//        // Iterate over each pixel in the input image
-//        for x in 1..<width-1 {
-//            for y in 1..<height-1 {
-//                // Initialize the Sobel gradient values
-//                var gradientX = 0
-//                var gradientY = 0
-//
-//                // Iterate over each pixel in the Sobel operator kernel
-//                for i in 0..<3 {
-//                    for j in 0..<3 {
-//                        // Calculate the coordinates of the current pixel in the input image
-//                        let xCoord = x + i - 1
-//                        let yCoord = y + j - 1
-//
-//                        // Get the pixel intensity value of the current pixel in the grayscale image
-//                        if let grayScaleImage {
-//                            let pixelValue = grayScaleImage.getPixelIntensity(x: xCoord, y: yCoord)
-//
-//                            // Apply the Sobel operator to the pixel intensity value
-//                            if let pixelValue {
-//                                gradientX += pixelValue * sobelKernelX[i][j]
-//                                gradientY += pixelValue * sobelKernelY[i][j]
-//                            }
-//                        }
-//                    }
-//                }
-//
-//                // Calculate the magnitude of the Sobel gradient vector
-//                let gradientMagnitude = sqrt(Double(gradientX * gradientX + gradientY * gradientY))
-//
-//                // Create a new pixel color with the gradient magnitude
-//                let gradientColor = UIColor(red: CGFloat(gradientMagnitude), green: CGFloat(gradientMagnitude), blue: CGFloat(gradientMagnitude), alpha: 1.0)
-//
-//                // Set the pixel color in the output image context
-//                gradientColor.setFill()
-//                UIRectFill(CGRect(x: x, y: y, width: 1, height: 1))
-//            }
-//        }
-//
-//        // Get the output image from the context
-//        let outputImage = UIGraphicsGetImageFromCurrentImageContext()
-//
-//        // End the image context
-//        UIGraphicsEndImageContext()
-//
-//        // Display the output image on the screen
-//        let imageView = UIImageView(image: outputImage)
-//        return imageView
-//    }
 }
 
 extension UIImage {
-    func convertToGrayScale() -> UIImage {
+    // Convert UIImage to grayscale pixel data
+    func convertToGrayscale() -> UIImage? {
         let colorSpace = CGColorSpaceCreateDeviceGray()
         let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue)
-        let context = CGContext(data: nil, width: Int(self.size.width), height: Int(self.size.height), bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace, bitmapInfo: bitmapInfo.rawValue)!
-        context.draw(self.cgImage!, in: CGRect(origin: CGPoint.zero, size: self.size))
-        let grayImage = context.makeImage()!
-        return UIImage(cgImage: grayImage)
-    }
-    
-    func getPixelIntensity(x: Int, y: Int) -> UInt8 {
-        let pixelData = self.cgImage!.dataProvider!.data
-        let data: UnsafePointer<UInt8> = CFDataGetBytePtr(pixelData)
-        let pixelInfo: Int = ((Int(self.size.width) * y) + x) * 1
-        return data[pixelInfo]
-    }
-    
-
-}
-
-extension UIImage {
-    func getPixels() -> [PixelData]? {
-        guard let cgImage = self.cgImage else {
+        
+        guard let context = CGContext(data: nil,
+                                      width: Int(size.width),
+                                      height: Int(size.height),
+                                      bitsPerComponent: 8,
+                                      bytesPerRow: 0,
+                                      space: colorSpace,
+                                      bitmapInfo: bitmapInfo.rawValue) else {
             return nil
         }
         
-        let width = Int(self.size.width)
-        let height = Int(self.size.height)
-        let bytesPerPixel = 4
-        let bytesPerRow = bytesPerPixel * width
-        let bitsPerComponent = 8
+        let rect = CGRect(x: 0, y: 0, width: size.width, height: size.height)
+        context.draw(cgImage!, in: rect)
         
-        var pixelData = [PixelData]()
-        var rawData = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
-        
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
-        guard let context = CGContext(data: &rawData,
-                                      width: width,
-                                      height: height,
-                                      bitsPerComponent: bitsPerComponent,
-                                      bytesPerRow: bytesPerRow,
-                                      space: colorSpace,
-                                      bitmapInfo: bitmapInfo) else {
-            return nil
-        }
-        
-        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
-        
-        for i in 0..<width*height {
-            let startIndex = i * bytesPerPixel
-            let red = rawData[startIndex]
-            let green = rawData[startIndex + 1]
-            let blue = rawData[startIndex + 2]
-            let alpha = rawData[startIndex + 3]
-            let pixel = PixelData(red: red, green: green, blue: blue, alpha: alpha)
-            pixelData.append(pixel)
-        }
-        
-        return pixelData
+        guard let grayscaleImage = context.makeImage() else { return nil }
+        return UIImage(cgImage: grayscaleImage)
     }
-}
-
-extension UIImage {
-    func createCGImage(pixels: UnsafeMutablePointer<PixelData>, width: Int, height: Int) -> CGImage? {
-        let bytesPerPixel = 4
-        let bytesPerRow = bytesPerPixel * width
-        let bitsPerComponent = 8
-        
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        guard let context = CGContext(data: pixels,
+    
+    // Convert pixel data to UIImage
+    convenience init?(pixelData: [Int], width: Int, height: Int) {
+        let colorSpace = CGColorSpaceCreateDeviceGray()
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue)
+        guard let context = CGContext(data: UnsafeMutableRawPointer(mutating: pixelData),
                                       width: width,
                                       height: height,
-                                      bitsPerComponent: bitsPerComponent,
-                                      bytesPerRow: bytesPerRow,
+                                      bitsPerComponent: 8,
+                                      bytesPerRow: width,
                                       space: colorSpace,
-                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
+                                      bitmapInfo: bitmapInfo.rawValue,
                                       releaseCallback: nil,
                                       releaseInfo: nil) else {
             return nil
         }
         
-        return context.makeImage()
+        guard let cgImage = context.makeImage() else { return nil }
+        self.init(cgImage: cgImage)
+    }
+    
+
+    func pixelData() -> [Int]? {
+        guard let cgImage = cgImage else { return nil }
+        
+        let width = Int(size.width)
+        let height = Int(size.height)
+        let bytesPerPixel = 1
+        let bytesPerRow = bytesPerPixel * width
+        
+        let totalBytes = height * bytesPerRow
+        var pixelData = [Int](repeating: 0, count: totalBytes)
+        let colorSpace = CGColorSpaceCreateDeviceGray()
+        
+        guard let context = CGContext(data: &pixelData,
+                                      width: width,
+                                      height: height,
+                                      bitsPerComponent: 8,
+                                      bytesPerRow: bytesPerRow,
+                                      space: colorSpace,
+                                      bitmapInfo: CGImageAlphaInfo.none.rawValue)
+        else {
+            return nil
+        }
+        
+        let rect = CGRect(x: 0, y: 0, width: width, height: height)
+        context.draw(cgImage, in: rect)
+        
+        return pixelData
     }
 }
-
-
-
-
-//extension UIImage {
-//    func convertToGrayScale() -> UIImage? {
-//        let colorSpace = CGColorSpaceCreateDeviceGray()
-//        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue)
-//        guard let context = CGContext(data: nil, width: Int(self.size.width), height: Int(self.size.height), bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace, bitmapInfo: bitmapInfo.rawValue) else {
-//            return nil
-//        }
-//
-//        let rect = CGRect(x: 0, y: 0, width: self.size.width, height: self.size.height)
-//        context.draw(self.cgImage!, in: rect)
-//
-//        guard let grayImage = context.makeImage() else {
-//            return nil
-//        }
-//
-//        return UIImage(cgImage: grayImage)
-//    }
-//}
-//
-//extension UIImage {
-//    func getPixelIntensity(x: Int, y: Int) -> Int? {
-//        guard let cgImage = self.cgImage else {
-//            return nil
-//        }
-//
-//        let width = cgImage.width
-//        let height = cgImage.height
-//        let bytesPerPixel = 4
-//        let bytesPerRow = bytesPerPixel * width
-//        let bitsPerComponent = 8
-//        let colorSpace = CGColorSpaceCreateDeviceRGB()
-//        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-//        var pixelData = [UInt8](repeating: 0, count: bytesPerPixel)
-//
-//        guard let context = CGContext(data: &pixelData, width: 1, height: 1, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: bitmapInfo) else {
-//            return nil
-//        }
-//
-//        let rect = CGRect(x: x, y: height - y - 1, width: 1, height: 1)
-//        context.draw(cgImage, in: rect)
-//
-//        let red = Int(pixelData[0])
-//        let green = Int(pixelData[1])
-//        let blue = Int(pixelData[2])
-//        let alpha = Int(pixelData[3])
-//        let intensity = (red + green + blue) / (3 * alpha)
-//
-//        return Int(intensity)
-//    }
-//}
